@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <compare>
+#include <type_traits>
 
 namespace ligndt::core {
 
@@ -42,7 +43,7 @@ public:
   static constexpr inline uint32_t kVersionMask = ((1U << kVersionBit) - 1U) << kIndexBit;
   static constexpr inline uint32_t kMaxVersion = (1U << kVersionBit) - 1U;
 
-  [[nodiscard]] constexpr inline explicit EntityId() noexcept : m_bits_{0} {}
+  [[nodiscard]] constexpr inline EntityId() noexcept : m_bits_{0} {}
 
   [[nodiscard]] __attribute__((always_inline)) static constexpr inline EntityId make(uint32_t index, uint32_t version) noexcept {
     EntityId id;
@@ -58,6 +59,10 @@ public:
   [[nodiscard]] __attribute__((always_inline)) constexpr inline uint32_t bits() const noexcept {
     return m_bits_;
   }
+  /// True iff version != 0.
+  ///
+  /// Contract: version 0 is reserved as the invalid marker; EntityManager
+  /// must issue versions in [1, kMaxVersion] and wrap kMaxVersion -> 1.
   [[nodiscard]] __attribute__((always_inline)) constexpr inline bool isValid() const noexcept {
     return m_bits_ != 0;
   }
