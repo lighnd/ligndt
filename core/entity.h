@@ -27,7 +27,7 @@ namespace ligndt::core {
 
 /// Status codes for the EntityManager subsystem
 enum class EntityError: uint8_t {
-    PoolExhausted = 0x01, // Index poll is full
+    PoolExhausted = 0x01, // Index pool is full
     InvalidIndex = 0x02, // The index went beyond the bounds of the designated array of versions
     VersionMismatch = 0x03, // The device index matches, but this device has already been deleted
     DoubleDestroy = 0x04, // An attempt to destroy a device that had already been destroyed previously
