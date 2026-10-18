@@ -22,7 +22,7 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     QApplication a(argc, argv);
-    const auto id = ligndt::core::EntityId::make(1U, 0);
+    constexpr auto id = ligndt::core::EntityId::make(1U, 1);
     const QString button_text = QString::asprintf(
         "\nIndex: %u\nVersion: %u\nRaw: 0x%08X",
         id.index(), id.version(), id.bits()

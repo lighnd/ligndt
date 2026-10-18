@@ -64,7 +64,7 @@ public:
   /// Contract: version 0 is reserved as the invalid marker; EntityManager
   /// must issue versions in [1, kMaxVersion] and wrap kMaxVersion -> 1.
   [[nodiscard]] __attribute__((always_inline)) constexpr inline bool isValid() const noexcept {
-    return m_bits_ != 0;
+    return version() != 0;
   }
 
   constexpr auto operator<=>(const EntityId&) const noexcept = default;
