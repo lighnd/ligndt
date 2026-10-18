@@ -65,8 +65,8 @@ if(NOT GLM_FOUND)
 endif()
 
 add_executable(ligndt main.cpp
-        core/entity.cc
         core/entity.h
+        core/entity_manager.h
 )
 
 target_link_libraries(ligndt PRIVATE

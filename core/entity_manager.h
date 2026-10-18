@@ -16,8 +16,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef LIGNDT_ENTITY_MANAGER_H
+#define LIGNDT_ENTITY_MANAGER_H
+
 #include "entity.h"
 
 namespace ligndt::core {
 
-} // namespace ligndt::core
+template <std::size_t MaxEntities>
+class EntityManager {
+ public:
+ private:
+};
+
+}  // namespace ligndt::core
+
+#endif  // LIGNDT_ENTITY_MANAGER_H
