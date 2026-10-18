@@ -18,11 +18,17 @@
 
 #include <QApplication>
 #include <QPushButton>
+#include "core/entity.h"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     QApplication a(argc, argv);
-    QPushButton button("Hello world!", nullptr);
-    button.resize(200, 100);
+    const auto id = ligndt::core::EntityId::make(1U, 0);
+    const QString button_text = QString::asprintf(
+        "\nIndex: %u\nVersion: %u\nRaw: 0x%08X",
+        id.index(), id.version(), id.bits()
+    );
+    QPushButton button(button_text, nullptr);
+    button.resize(300, 150);
     button.show();
     return QApplication::exec();
 }
