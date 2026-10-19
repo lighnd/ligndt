@@ -64,9 +64,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(benchmark)
 
-if(TARGET benchmark)
-    target_compile_options(benchmark PRIVATE -Wno-c2y-extensions)
-endif()
+#if(TARGET benchmark)
+#    target_compile_options(benchmark PRIVATE -Wno-c2y-extensions)
+#endif()
 if(TARGET benchmark_main)
     target_compile_options(benchmark_main PRIVATE -Wno-c2y-extensions)
 endif()

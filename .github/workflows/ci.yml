@@ -38,17 +38,17 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libomp-dev libboost-all-dev qt6-base-dev libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev clang lld
+          sudo apt-get install -y ninja-build libomp-dev libboost-all-dev qt6-base-dev libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev libc++-dev libc++abi-dev clang lld
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ninja boost qt@6 google-benchmark hwy glm libomp vulkan-headers vulkan-loader molten-vk
+          brew install ninja boost qt@6 google-benchmark highway glm libomp vulkan-headers vulkan-loader molten-vk
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          vcpkg install boost-filesystem:x64-windows qtbase:x64-windows benchmark:x64-windows hwy:x64-windows glm:x64-windows vulkan:x64-windows
+          vcpkg install boost-filesystem:x64-windows qtbase:x64-windows benchmark:x64-windows highway:x64-windows glm:x64-windows vulkan:x64-windows
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -114,7 +114,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libomp-dev libboost-all-dev qt6-base-dev libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev clang lld
+          sudo apt-get install -y ninja-build libomp-dev libboost-all-dev qt6-base-dev libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev libc++-dev libc++abi-dev clang lld
 
       - name: Configure CMake with Sanitizer
         run: |
