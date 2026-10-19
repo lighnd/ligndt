@@ -50,6 +50,34 @@ find_package(Vulkan REQUIRED)
 find_package(Threads REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Boost 1.74 REQUIRED COMPONENTS filesystem)
+include(FetchContent)
+
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_WERROR OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_USE_LIBCXX ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+        benchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG        v1.9.1
+)
+FetchContent_MakeAvailable(benchmark)
+
+if(TARGET benchmark)
+    target_compile_options(benchmark PRIVATE -Wno-c2y-extensions)
+endif()
+if(TARGET benchmark_main)
+    target_compile_options(benchmark_main PRIVATE -Wno-c2y-extensions)
+endif()
+
+find_package(highway CONFIG QUIET)
+if(NOT highway_FOUND)
+    find_package(hwy CONFIG QUIET)
+    if(NOT hwy_FOUND)
+        message(FATAL_ERROR "Could not find Google Highway. Please run: sudo apt install libhwy-dev")
+    endif()
+endif()
 
 find_package(GLM NAMES glm GLM CONFIG QUIET)
 if(NOT GLM_FOUND)
@@ -64,23 +92,7 @@ if(NOT GLM_FOUND)
     )
 endif()
 
-add_executable(ligndt main.cpp
-        core/entity.h
-        core/entity_manager.h
-)
-
-target_link_libraries(ligndt PRIVATE
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Vulkan::Vulkan
-        Threads::Threads
-        glm::glm
-        OpenMP::OpenMP_CXX
-        Boost::filesystem
-)
-
-target_compile_options(ligndt PRIVATE
+set(LIGNDT_WARNINGS
         -Wno-unknown-warning-option
         -Werror
         -Wall -Wextra
@@ -110,17 +122,63 @@ target_compile_options(ligndt PRIVATE
         -Wno-unused-command-line-argument
 )
 
-target_compile_options(ligndt PRIVATE
+set(LIGNDT_SANITIZERS
         $<$<CONFIG:Debug>:-O0 -g3 -fno-elide-constructors -fsanitize=address,undefined,leak -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-common -DDEBUG>
         $<$<CONFIG:Release>:-O3 -march=native -ffast-math -flto=thin -fvectorize -fslp-vectorize -fomit-frame-pointer -mllvm -inline-threshold=1000 -ffunction-sections -fdata-sections -DNDEBUG>
         $<$<CONFIG:MinSizeRel>:-Os -flto=thin -ffunction-sections -fdata-sections -DNDEBUG>
         $<$<CONFIG:RelWithDebInfo>:-O3 -g -march=native -ffast-math -flto=thin -fvectorize -fslp-vectorize -fno-omit-frame-pointer -DNDEBUG>
 )
 
-target_link_options(ligndt PRIVATE
+set(LIGNDT_LINK_OPTS
         -Wl,--as-needed
         $<$<CONFIG:Debug>:-fsanitize=address,undefined,leak -fno-sanitize-recover=all>
         $<$<CONFIG:Release>:-flto=thin -Wl,-O2 -Wl,--gc-sections>
         $<$<CONFIG:MinSizeRel>:-flto=thin -Wl,-O2 -Wl,--gc-sections>
         $<$<CONFIG:RelWithDebInfo>:-flto=thin>
+)
+
+add_library(ligndt_core INTERFACE)
+target_include_directories(ligndt_core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ligndt_core INTERFACE
+        OpenMP::OpenMP_CXX
+        Threads::Threads
+)
+
+add_executable(ligndt main.cpp)
+target_link_libraries(ligndt PRIVATE
+        ligndt_core
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Vulkan::Vulkan
+        glm::glm
+        Boost::filesystem
+        hwy::hwy
+)
+target_compile_options(ligndt PRIVATE ${LIGNDT_WARNINGS} ${LIGNDT_SANITIZERS})
+target_link_options(ligndt PRIVATE ${LIGNDT_LINK_OPTS})
+
+enable_testing()
+
+add_executable(ligndt_tests tests/entity_manager_tests.cc)
+target_link_libraries(ligndt_tests PRIVATE ligndt_core)
+target_compile_options(ligndt_tests PRIVATE
+        ${LIGNDT_SANITIZERS}
+        -Wall -Wextra -Wpedantic
+        -Wno-error
+)
+add_test(NAME HardcoreEntityTests COMMAND ligndt_tests)
+
+add_executable(ligndt_bench benchmarks/bench_entity_manager.cc)
+target_link_libraries(ligndt_bench PRIVATE
+        ligndt_core
+        benchmark::benchmark
+        benchmark::benchmark_main
+)
+target_compile_options(ligndt_bench PRIVATE
+        -O3
+        -march=native
+        -DNDEBUG
+        -Wall -Wextra
+        -Wno-error
 )

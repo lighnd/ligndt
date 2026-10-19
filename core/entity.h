@@ -22,6 +22,7 @@
 #include <compare>
 #include <cstdint>
 #include <type_traits>
+#include <ostream>
 
 namespace ligndt::core {
 
@@ -70,7 +71,7 @@ class alignas(uint32_t) EntityId {
   /// True iff version != 0.
   ///
   /// Contract: version 0 is reserved as the invalid marker; EntityManager
-  /// must issue versions in [1, kMaxVersion] and wrap kMaxVersion -> 1.
+  /// must issue versions in [1, kMaxVersion] and wrap kMaxVersion -> 1
   [[nodiscard]] __attribute__((always_inline)) constexpr inline bool isValid()
       const noexcept {
     return version() != 0;
@@ -86,6 +87,16 @@ static_assert(sizeof(EntityId) == sizeof(std::uint32_t),
               "EntityId must be exactly 32-bits");
 static_assert(std::is_trivially_copyable_v<EntityId>,
               "EntityId must be trivially copyable");
+
+inline std::ostream& operator<<(std::ostream& os, EntityError err) {
+  switch (err) {
+    case EntityError::PoolExhausted:   return os << "PoolExhausted";
+    case EntityError::InvalidIndex:    return os << "InvalidIndex";
+    case EntityError::VersionMismatch: return os << "VersionMismatch";
+    case EntityError::DoubleDestroy:   return os << "DoubleDestroy";
+  }
+  return os << "Unknown(" << static_cast<int>(err) << ")";
+}
 
 }  // namespace ligndt::core
 
