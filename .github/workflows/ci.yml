@@ -56,25 +56,27 @@ jobs:
             container: "rockylinux:9"
 
     steps:
-      - name: Install git (Ubuntu / Debian containers)
+      - name: Install git and ccache (Ubuntu / Debian containers)
         if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
         run: |
-          apt-get update && apt-get install -y git --no-install-recommends
+          apt-get update
+          apt-get install -y git ccache --no-install-recommends
 
-      - name: Install git (Fedora container)
+      - name: Install git and ccache (Fedora container)
         if: startsWith(matrix.container, 'fedora')
         run: |
-          dnf install -y git
+          dnf install -y git ccache
 
-      - name: Install git (Arch container)
+      - name: Install git and ccache (Arch container)
         if: startsWith(matrix.container, 'archlinux')
         run: |
-          pacman -Sy --noconfirm git
+          pacman -Sy --noconfirm git ccache
 
-      - name: Install git (AlmaLinux / Rocky Linux containers)
+      - name: Install git and ccache (AlmaLinux / Rocky Linux containers)
         if: startsWith(matrix.container, 'almalinux') || startsWith(matrix.container, 'rockylinux')
         run: |
-          dnf install -y git
+          dnf install -y epel-release || true
+          dnf install -y git ccache
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -101,12 +103,13 @@ jobs:
         if: matrix.container == 'ubuntu:24.04'
         run: |
           apt-get install -y ninja-build libomp-23-dev libboost-all-dev qt6-base-dev \
-            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache
+            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ matrix.name }}
+          variant: sccache
 
       - name: Configure CMake
         env:
