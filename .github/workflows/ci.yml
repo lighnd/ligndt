@@ -95,9 +95,9 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           ./llvm.sh 23 all
-          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-23 100
-          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 100
-          update-alternatives --install /usr/bin/lld lld /usr/bin/lld-23 100
+          ln -sf /usr/lib/llvm-23/bin/clang /usr/bin/clang-23
+          ln -sf /usr/lib/llvm-23/bin/clang++ /usr/bin/clang++-23
+          ln -sf /usr/lib/llvm-23/bin/lld /usr/bin/lld-23
 
       - name: Install dependencies (Ubuntu 24.04)
         if: matrix.container == 'ubuntu:24.04'
@@ -112,13 +112,15 @@ jobs:
 
       - name: Configure CMake
         env:
+          CC: /usr/lib/llvm-23/bin/clang
+          CXX: /usr/lib/llvm-23/bin/clang++
           SAN_FLAG: ${{ matrix.sanitizer != 'none' && format('-fsanitize={0} -fno-omit-frame-pointer', matrix.sanitizer) || '' }}
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_C_COMPILER=clang-23 \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
-            -DCMAKE_LINKER=lld-23 \
+            -DCMAKE_C_COMPILER=/usr/lib/llvm-23/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/lib/llvm-23/bin/clang++ \
+            -DCMAKE_LINKER=/usr/lib/llvm-23/bin/lld \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_C_FLAGS="$SAN_FLAG" \
