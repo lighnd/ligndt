@@ -56,6 +56,26 @@ jobs:
             container: "rockylinux:9"
 
     steps:
+      - name: Install git (Ubuntu / Debian containers)
+        if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
+        run: |
+          apt-get update && apt-get install -y git --no-install-recommends
+
+      - name: Install git (Fedora container)
+        if: startsWith(matrix.container, 'fedora')
+        run: |
+          dnf install -y git
+
+      - name: Install git (Arch container)
+        if: startsWith(matrix.container, 'archlinux')
+        run: |
+          pacman -Sy --noconfirm git
+
+      - name: Install git (AlmaLinux / Rocky Linux containers)
+        if: startsWith(matrix.container, 'almalinux') || startsWith(matrix.container, 'rockylinux')
+        run: |
+          dnf install -y git
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -81,7 +101,7 @@ jobs:
         if: matrix.container == 'ubuntu:24.04'
         run: |
           apt-get install -y ninja-build libomp-23-dev libboost-all-dev qt6-base-dev \
-            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache git
+            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
