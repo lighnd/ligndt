@@ -20,17 +20,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "Ubuntu 24.04 (Clang 23, Release)"
+          - name: "Ubuntu 24.04 Clang 23 Release"
             sanitizer: "none"
             build_type: "Release"
             container: "ubuntu:24.04"
 
-          - name: "Ubuntu 24.04 (Clang 23 + ASan)"
+          - name: "Ubuntu 24.04 Clang 23 ASan"
             sanitizer: "address"
             build_type: "Debug"
             container: "ubuntu:24.04"
 
-          - name: "Debian Bookworm (Clang 23)"
+          - name: "Debian Bookworm Clang 23"
             sanitizer: "none"
             build_type: "Release"
             container: "debian:bookworm"
@@ -71,7 +71,7 @@ jobs:
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ github.job }}-${{ matrix.name }}
+          key: ${{ github.job }}-${{ matrix.container }}-${{ matrix.build_type }}-${{ matrix.sanitizer }}
 
       - name: Configure CMake
         env:
