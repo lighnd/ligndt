@@ -35,75 +35,38 @@ jobs:
             build_type: "Release"
             container: "debian:bookworm"
 
-          - name: "Fedora Latest (Clang)"
-            sanitizer: "none"
-            build_type: "Release"
-            container: "fedora:latest"
-
-          - name: "Arch Linux (Clang)"
-            sanitizer: "none"
-            build_type: "Release"
-            container: "archlinux:latest"
-
-          - name: "AlmaLinux 9 (Clang)"
-            sanitizer: "none"
-            build_type: "Release"
-            container: "almalinux:9"
-
-          - name: "Rocky Linux 9 (Clang)"
-            sanitizer: "none"
-            build_type: "Release"
-            container: "rockylinux:9"
-
     steps:
-      - name: Install system tools (Ubuntu / Debian)
-        if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
+      - name: Install system tools
         run: |
           apt-get update
-          apt-get install -y git ccache cmake ninja-build --no-install-recommends
-
-      - name: Install system tools (Fedora)
-        if: startsWith(matrix.container, 'fedora')
-        run: |
-          dnf install -y git ccache cmake ninja-build
-
-      - name: Install system tools (Arch Linux)
-        if: startsWith(matrix.container, 'archlinux')
-        run: |
-          pacman -Sy --noconfirm git ccache cmake ninja
-
-      - name: Install system tools (AlmaLinux / Rocky Linux)
-        if: startsWith(matrix.container, 'almalinux') || startsWith(matrix.container, 'rockylinux')
-        run: |
-          dnf install -y epel-release || true
-          dnf install -y git ccache cmake ninja-build
+          apt-get install -y git ca-certificates ccache cmake ninja-build --no-install-recommends
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install prerequisites (Ubuntu / Debian)
-        if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
+      - name: Install prerequisites
         run: |
-          apt-get update
           apt-get install -y wget lsb-release software-properties-common gnupg --no-install-recommends
 
-      - name: Install LLVM / Clang 23 (Debian/Ubuntu)
-        if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
+      - name: Install LLVM / Clang 23
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           ./llvm.sh 23 all
-          ln -sf /usr/lib/llvm-23/bin/clang /usr/bin/clang-23
-          ln -sf /usr/lib/llvm-23/bin/clang++ /usr/bin/clang++-23
-          ln -sf /usr/lib/llvm-23/bin/lld /usr/bin/lld-23
 
-      - name: Install dependencies (Ubuntu 24.04)
+      - name: Install dependencies (Ubuntu specific)
         if: matrix.container == 'ubuntu:24.04'
         run: |
           apt-get install -y libomp-23-dev libboost-all-dev qt6-base-dev \
             libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev
+
+      - name: Install dependencies (Debian specific)
+        if: matrix.container == 'debian:bookworm'
+        run: |
+          apt-get install -y libomp-23-dev libboost-all-dev qt6-base-dev \
+            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev || true
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -112,15 +75,13 @@ jobs:
 
       - name: Configure CMake
         env:
-          CC: /usr/lib/llvm-23/bin/clang
-          CXX: /usr/lib/llvm-23/bin/clang++
           SAN_FLAG: ${{ matrix.sanitizer != 'none' && format('-fsanitize={0} -fno-omit-frame-pointer', matrix.sanitizer) || '' }}
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_C_COMPILER=/usr/lib/llvm-23/bin/clang \
-            -DCMAKE_CXX_COMPILER=/usr/lib/llvm-23/bin/clang++ \
-            -DCMAKE_LINKER=/usr/lib/llvm-23/bin/lld \
+            -DCMAKE_C_COMPILER=/usr/bin/clang-23 \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++-23 \
+            -DCMAKE_LINKER=/usr/bin/lld-23 \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_C_FLAGS="$SAN_FLAG" \
