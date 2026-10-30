@@ -50,15 +50,15 @@ jobs:
             build_type: "Release"
 
     steps:
+      - name: Bootstrap Environment
+        run: |
+          apt-get update
+          apt-get install -y git wget lsb-release software-properties-common gnupg sudo
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install System Tools
-        run: |
-          apt-get update
-          apt-get install -y wget lsb-release software-properties-common gnupg sudo git
 
       - name: Install LLVM / Clang 23
         run: |
