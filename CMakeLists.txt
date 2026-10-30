@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://apache.org
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +28,11 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_compile_options(-stdlib=libc++ -fcolor-diagnostics)
+add_compile_options(
+        -stdlib=libc++
+        -fcolor-diagnostics
+        -D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
+)
 add_link_options(-stdlib=libc++ -fuse-ld=lld)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -64,9 +68,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(benchmark)
 
-#if(TARGET benchmark)
-#    target_compile_options(benchmark PRIVATE -Wno-c2y-extensions)
-#endif()
+if(TARGET benchmark)
+    target_compile_options(benchmark PRIVATE -Wno-c2y-extensions)
+endif()
 if(TARGET benchmark_main)
     target_compile_options(benchmark_main PRIVATE -Wno-c2y-extensions)
 endif()
