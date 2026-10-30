@@ -13,10 +13,9 @@ concurrency:
 jobs:
   build-and-test:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:24.04
-      options: --user root
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.container }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -24,55 +23,65 @@ jobs:
           - name: "Ubuntu 24.04 (Clang 23, Release)"
             sanitizer: "none"
             build_type: "Release"
+            container: "ubuntu:24.04"
 
           - name: "Ubuntu 24.04 (Clang 23 + ASan)"
             sanitizer: "address"
             build_type: "Debug"
+            container: "ubuntu:24.04"
 
-          - name: "Debian Bookworm Environment (Clang 23)"
+          - name: "Debian Bookworm (Clang 23)"
             sanitizer: "none"
             build_type: "Release"
+            container: "debian:bookworm"
 
-          - name: "Fedora Environment (Clang 23)"
+          - name: "Fedora Latest (Clang)"
             sanitizer: "none"
             build_type: "Release"
+            container: "fedora:latest"
 
-          - name: "Arch Linux Environment (Clang 23)"
+          - name: "Arch Linux (Clang)"
             sanitizer: "none"
             build_type: "Release"
+            container: "archlinux:latest"
 
-          - name: "AlmaLinux Environment (Clang 23)"
+          - name: "AlmaLinux 9 (Clang)"
             sanitizer: "none"
             build_type: "Release"
+            container: "almalinux:9"
 
-          - name: "Rocky Linux Environment (Clang 23)"
+          - name: "Rocky Linux 9 (Clang)"
             sanitizer: "none"
             build_type: "Release"
+            container: "rockylinux:9"
 
     steps:
-      - name: Bootstrap Environment
-        run: |
-          apt-get update
-          apt-get install -y git wget lsb-release software-properties-common gnupg sudo
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install LLVM / Clang 23
+      - name: Install prerequisites (Ubuntu / Debian)
+        if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
         run: |
-          wget https://llvm.org
-          chmod +x llvm.sh
-          sudo ./llvm.sh 23 all
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-23 100
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 100
-          sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-23 100
+          apt-get update
+          apt-get install -y wget lsb-release software-properties-common gnupg --no-install-recommends
 
-      - name: Install Dependencies
+      - name: Install LLVM / Clang 23 (Debian/Ubuntu)
+        if: matrix.container == 'ubuntu:24.04' || matrix.container == 'debian:bookworm'
         run: |
-          sudo apt-get install -y ninja-build libomp-23-dev libboost-all-dev qt6-base-dev \
-            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          ./llvm.sh 23 all
+          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-23 100
+          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 100
+          update-alternatives --install /usr/bin/lld lld /usr/bin/lld-23 100
+
+      - name: Install dependencies (Ubuntu 24.04)
+        if: matrix.container == 'ubuntu:24.04'
+        run: |
+          apt-get install -y ninja-build libomp-23-dev libboost-all-dev qt6-base-dev \
+            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache git
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
