@@ -13,20 +13,65 @@ concurrency:
 jobs:
   build-and-test:
     name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: "Linux (Ubuntu Latest, Clang)"
-            os: ubuntu-latest
-            compiler: clang
-          - name: "macOS (Latest, Apple Clang)"
-            os: macos-latest
-            compiler: clang
-          - name: "Windows (Latest, MSVC)"
-            os: windows-latest
-            compiler: msvc
+          - name: "Ubuntu (Clang 23, Release)"
+            container: null
+            distro: "ubuntu"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "Ubuntu (Clang 23 + ASan)"
+            container: null
+            distro: "ubuntu"
+            sanitizer: "address"
+            build_type: "Debug"
+
+          - name: "Debian Bookworm (Clang 23, Release)"
+            container: "debian:bookworm-slim"
+            distro: "debian"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "Debian Testing (Clang 23, Release)"
+            container: "debian:testing-slim"
+            distro: "debian"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "Debian Sid (Clang 23, Release)"
+            container: "debian:sid-slim"
+            distro: "debian"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "Fedora (Clang 23, Release)"
+            container: "silkeh/clang:23"
+            distro: "rhel-fedora"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "Arch Linux (Clang 23, Release)"
+            container: "silkeh/clang:23"
+            distro: "arch"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "AlmaLinux 9 (Clang 23, Release)"
+            container: "silkeh/clang:23"
+            distro: "rhel-fedora"
+            sanitizer: "none"
+            build_type: "Release"
+
+          - name: "Rocky Linux 9 (Clang 23, Release)"
+            container: "silkeh/clang:23"
+            distro: "rhel-fedora"
+            sanitizer: "none"
+            build_type: "Release"
 
     steps:
       - name: Checkout repository
@@ -34,61 +79,50 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Install LLVM / Clang 23 (Debian & Ubuntu)
+        if: matrix.distro == 'ubuntu' || matrix.distro == 'debian'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libomp-dev libboost-all-dev qt6-base-dev libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev libc++-dev libc++abi-dev clang lld
+          apt-get update
+          apt-get install -y wget lsb-release software-properties-common gnupg sudo git
+          wget https://llvm.org
+          chmod +x llvm.sh
+          sudo ./llvm.sh 23 all
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-23 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 100
+          sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-23 100
 
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
+      - name: Install Dependencies (Ubuntu & Debian)
+        if: matrix.distro == 'ubuntu' || matrix.distro == 'debian'
         run: |
-          brew install ninja boost qt@6 google-benchmark highway glm libomp vulkan-headers vulkan-loader molten-vk
+          sudo apt-get install -y ninja-build libomp-23-dev libboost-all-dev qt6-base-dev \
+            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache
 
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
+      - name: Install Dependencies (RHEL, Fedora, Arch)
+        if: matrix.distro == 'rhel-fedora' || matrix.distro == 'arch'
         run: |
-          vcpkg install boost-filesystem:x64-windows qtbase:x64-windows benchmark:x64-windows highway:x64-windows glm:x64-windows vulkan:x64-windows
+          apt-get update
+          apt-get install -y ninja-build libboost-all-dev qt6-base-dev \
+            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache libomp-23-dev
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.compiler }}
+          key: ${{ github.job }}-${{ matrix.name }}
 
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
+      - name: Configure CMake
+        env:
+          SAN_FLAG: ${{ matrix.sanitizer != 'none' && format('-fsanitize={0} -fno-omit-frame-pointer', matrix.sanitizer) || '' }}
         run: |
           cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER=clang-23 \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_LINKER=lld-23 \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DBUILD_TESTING=ON
-
-      - name: Configure CMake (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DBUILD_TESTING=ON \
-            -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
-            -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
-            -DOpenMP_EXE_LINKER_FLAGS="-L$(brew --prefix libomp)/lib -lomp"
-
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake `
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache `
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache `
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
+            -DCMAKE_C_FLAGS="$SAN_FLAG" \
+            -DCMAKE_CXX_FLAGS="$SAN_FLAG" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld $SAN_FLAG" \
             -DBUILD_TESTING=ON
 
       - name: Build
@@ -96,39 +130,3 @@ jobs:
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --parallel 4
-
-  sanitizers:
-    name: "Sanitizers (Linux, Clang)"
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    strategy:
-      fail-fast: false
-      matrix:
-        sanitizer: [address, undefined, thread]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libomp-dev libboost-all-dev qt6-base-dev libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev libc++-dev libc++abi-dev clang lld
-
-      - name: Configure CMake with Sanitizer
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_C_FLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer" \
-            -DCMAKE_CXX_FLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=${{ matrix.sanitizer }}" \
-            -DBUILD_TESTING=ON
-
-      - name: Build
-        run: cmake --build build --parallel
-
-      - name: Run tests with Sanitizer
-        run: ctest --test-dir build --output-on-failure
