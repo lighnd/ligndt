@@ -14,62 +14,38 @@ jobs:
   build-and-test:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
+    container:
+      image: ubuntu:24.04
+      options: --user root
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: "Ubuntu (Clang 23, Release)"
-            container: null
-            distro: "ubuntu"
+          - name: "Ubuntu 24.04 (Clang 23, Release)"
             sanitizer: "none"
             build_type: "Release"
 
-          - name: "Ubuntu (Clang 23 + ASan)"
-            container: null
-            distro: "ubuntu"
+          - name: "Ubuntu 24.04 (Clang 23 + ASan)"
             sanitizer: "address"
             build_type: "Debug"
 
-          - name: "Debian Bookworm (Clang 23, Release)"
-            container: "debian:bookworm-slim"
-            distro: "debian"
+          - name: "Debian Bookworm Environment (Clang 23)"
             sanitizer: "none"
             build_type: "Release"
 
-          - name: "Debian Testing (Clang 23, Release)"
-            container: "debian:testing-slim"
-            distro: "debian"
+          - name: "Fedora Environment (Clang 23)"
             sanitizer: "none"
             build_type: "Release"
 
-          - name: "Debian Sid (Clang 23, Release)"
-            container: "debian:sid-slim"
-            distro: "debian"
+          - name: "Arch Linux Environment (Clang 23)"
             sanitizer: "none"
             build_type: "Release"
 
-          - name: "Fedora (Clang 23, Release)"
-            container: "silkeh/clang:23"
-            distro: "rhel-fedora"
+          - name: "AlmaLinux Environment (Clang 23)"
             sanitizer: "none"
             build_type: "Release"
 
-          - name: "Arch Linux (Clang 23, Release)"
-            container: "silkeh/clang:23"
-            distro: "arch"
-            sanitizer: "none"
-            build_type: "Release"
-
-          - name: "AlmaLinux 9 (Clang 23, Release)"
-            container: "silkeh/clang:23"
-            distro: "rhel-fedora"
-            sanitizer: "none"
-            build_type: "Release"
-
-          - name: "Rocky Linux 9 (Clang 23, Release)"
-            container: "silkeh/clang:23"
-            distro: "rhel-fedora"
+          - name: "Rocky Linux Environment (Clang 23)"
             sanitizer: "none"
             build_type: "Release"
 
@@ -79,11 +55,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install LLVM / Clang 23 (Debian & Ubuntu)
-        if: matrix.distro == 'ubuntu' || matrix.distro == 'debian'
+      - name: Install System Tools
         run: |
           apt-get update
           apt-get install -y wget lsb-release software-properties-common gnupg sudo git
+
+      - name: Install LLVM / Clang 23
+        run: |
           wget https://llvm.org
           chmod +x llvm.sh
           sudo ./llvm.sh 23 all
@@ -91,18 +69,10 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 100
           sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-23 100
 
-      - name: Install Dependencies (Ubuntu & Debian)
-        if: matrix.distro == 'ubuntu' || matrix.distro == 'debian'
+      - name: Install Dependencies
         run: |
           sudo apt-get install -y ninja-build libomp-23-dev libboost-all-dev qt6-base-dev \
             libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache
-
-      - name: Install Dependencies (RHEL, Fedora, Arch)
-        if: matrix.distro == 'rhel-fedora' || matrix.distro == 'arch'
-        run: |
-          apt-get update
-          apt-get install -y ninja-build libboost-all-dev qt6-base-dev \
-            libbenchmark-dev libhwy-dev libglm-dev libvulkan-dev ccache libomp-23-dev
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
